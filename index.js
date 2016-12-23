@@ -2,7 +2,25 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var request = require('request');
-var MongoClient = require('mongodb').MongoClient
+var MongoClient = require('mongodb').MongoClient;
+var https = require('https');
+var http = require('http');
+
+var server = null;
+var usessl = false;
+if (process.env.SSL === 'true')
+	usessl = true;
+
+if (usessl) {
+	var sslConfig = require('./ssl-config.js');
+	server = https.createServer({
+		key: sslConfig.privateKey,
+		cert: sslConfig.certificate
+	},app);
+}
+else {
+	server = http.createServer(app);
+}
 
 app.set('port', (process.env.PORT || 5000));
 
@@ -253,7 +271,7 @@ app.get('/', function(request, response) {
 	response.end();
 });
 
-app.listen(app.get('port'), function() {
+server.listen(app.get('port'), function() {
 	console.log('Node app is running on port', app.get('port'));
 	MongoClient.connect('mongodb://localhost:27017/plusBot', function(err, db) {
 		if (err) return console.log(err);
