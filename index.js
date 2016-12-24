@@ -6,6 +6,8 @@ var MongoClient = require('mongodb').MongoClient;
 var https = require('https');
 var http = require('http');
 var moment = require('moment');
+var csvStringify = require('csv-stringify');
+global.Promise = require('bluebird');
 
 var server = null;
 var usessl = false;
@@ -110,9 +112,64 @@ function getTransactions(splitted, requestBody, req, res) {
 		})
 		.join('\n');
 
+		textToSend += '\n' + '<https://api.shipsy.in:5002/transactions/transactions_' + groupName + '.csv?group=' +
+			groupName + '|Download CSV>';
+
 		res.end(textToSend);
 	});
 };
+
+function getTransactionsCSV(req, res) {
+	var query = req.query;
+	var groupName = query.group;
+	if (!groupName)
+		return Promise.reject(createError('Group name should be present'));
+	groupName = groupName.toLowerCase();
+
+	return app.db.collection('scoreHistory').find({groupName: groupName})
+		.sort({createdAt: -1})
+		.toArray()
+	.then(function(transactions) {
+		if (transactions.length === 0)
+			return Promise.reject(createError('No transactions found'));
+
+		var stringifier = csvStringify({header: true});
+		res.setHeader('Content-disposition', 'attachment');
+		res.set('Content-Type', 'text/csv');
+		res.status(200);
+
+		//Pipe stringifier to response
+		stringifier.pipe(res);
+
+		stringifier.on('error', function(err) {
+			return cb(err);
+		});
+		console.log('here 1')
+
+		//For async
+		return Promise.mapSeries(transactions, function(elem) {
+			var toSend = {
+				'thing': elem.thingName,
+				'change': elem.change,
+				'createdBy': elem.createdByName,
+				'createdAt': moment(elem.createdAt).format('YYYY-MM-DD HH:mm:ss')
+			};
+			stringifier.write(toSend);
+		})
+		.then(function() {
+			stringifier.end();
+		});
+	})
+	.catch(function(err) {
+		console.log(err);
+		if (err.isMine)
+			res.status(400);
+		else
+			res.status(500);
+
+		res.json({error: err.message});
+	});
+}
 
 
 function getScores(splitted, requestBody, req, res) {
@@ -218,6 +275,10 @@ function createError(message, options) {
 app.get('/', function(request, response) {
 	response.write('HELLO THERE');
 	response.end();
+});
+
+app.get('/transactions/:fileName', function(req, res) {
+	getTransactionsCSV(req, res);
 });
 
 server.listen(app.get('port'), function() {
