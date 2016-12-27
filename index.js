@@ -58,9 +58,9 @@ var doAddition = function(splitted, requestBody) {
 			name: groupName
 		},
 		{
-			$inc: {
-				['scores.' + thingName]: change
-			},
+			// $inc: {
+			// 	['scores.' + thingName]: change
+			// },
 			$setOnInsert: { 
 				createdAt: currentTime
 			}
@@ -78,7 +78,21 @@ var doAddition = function(splitted, requestBody) {
 			thingName: thingName,
 			change: change
 		});
-	});
+	})
+	.then(function() {
+		return app.db.collection('scores').update(
+			{
+				groupName: groupName,
+				thingName: thingName
+			},
+			{
+				$inc: {
+					score: change
+				}
+			},
+			{upsert: true}
+		);
+	})
 };
 
 function getTransactions(splitted, requestBody, req, res) {
@@ -178,17 +192,17 @@ function getScores(splitted, requestBody, req, res) {
 		return Promise.reject(createError('Group name should be present'));
 	groupName = groupName.toLowerCase();
 
-	return app.db.collection('groups').findOne(
+	return app.db.collection('scores').find(
 		{
-			name: groupName
-		},
-		{
-			fields: {scores: 1}
+			groupName: groupName
 		}
 	)
+	.toArray()
 	.then(function(result) {
-		var scoreList = Object.keys(result.scores)
-			.map((key) => {return {name: key, score: result.scores[key]}})
+		// var scoreList = Object.keys(result.scores)
+			// .map((key) => {return {name: key, score: result.scores[key]}})
+		var scoreList = result
+			.map((elem) => {return {name: elem.thingName, score: elem.score}})
 			.sort((a, b) => {return b.score - a.score});
 
 		return scoreList.map(function(elem) {
