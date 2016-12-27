@@ -1,18 +1,24 @@
+groups
 {
 	name
 	createdAt
-	scores: {
-		name: score
-	}
-	history: [
-		{
-			createdById
-			createdByName
-			createdAt
-			channelName
-			channelId
-			thingName
-			change
-		}
-	]
+}
+
+scoreHistory
+{
+	groupName
+	createdById
+	createdByName
+	createdAt
+	channelName
+	channelId
+	thingName
+	change
+}
+
+scores
+{
+	groupName
+	thingName
+	score
 }
