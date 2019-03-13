@@ -126,7 +126,7 @@ function getTransactions(splitted, requestBody, req, res) {
 		})
 		.join('\n');
 
-		textToSend += '\n' + '<https://api.shipsy.in:5002/transactions/transactions_' + groupName + '.csv?group=' +
+		textToSend += '\n' + '<https://example.com/transactions/transactions_' + groupName + '.csv?group=' +
 			groupName + '|Download CSV>';
 
 		res.end(textToSend);
